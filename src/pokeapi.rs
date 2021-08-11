@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Debug)]
 pub struct PokemonOutput {
     name: String,
-    description: String,
-    habitat: String,
+    pub description: String,
+    pub habitat: String,
     #[serde(rename = "isLegendary")]
-    is_legendary: bool,
+    pub is_legendary: bool,
 }
 
 impl PokemonOutput {
@@ -65,7 +65,8 @@ impl PokeApiData {
             )) // <- Create request builder
             .send() // <- Send http request
             .await
-            .ok()?
+            .expect("oof")
+    //        .ok()?
             .json()
             .await
             .ok()
