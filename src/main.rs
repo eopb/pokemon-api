@@ -1,14 +1,12 @@
-use actix_web::{get, web, App, HttpServer, Responder};
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use awc::Client;
-use serde::{Deserialize, Serialize};
 use pokeapi::PokemonOutput;
+use serde::{Deserialize, Serialize};
 mod pokeapi;
-
 
 #[get("/pokemon/{pokemon}")]
 async fn index(web::Path((pokemon,)): web::Path<(String,)>) -> impl Responder {
-    dbg!(PokemonOutput::get("ditto").await);
-    "hi"
+    HttpResponse::Ok().json(PokemonOutput::get(&pokemon).await)
 }
 
 #[actix_web::main]

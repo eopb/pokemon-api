@@ -2,11 +2,12 @@ use actix_web::{get, web, App, HttpServer, Responder};
 use awc::Client;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub struct PokemonOutput {
     name: String,
     description: String,
     habitat: String,
+    #[serde(rename = "isLegendary")]
     is_legendary: bool,
 }
 
