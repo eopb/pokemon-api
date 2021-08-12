@@ -32,6 +32,7 @@ async fn translated(web::Path((pokemon,)): web::Path<(String,)>) -> impl Respond
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // set subscriber to print tracing logs to stdout
     {
         let subscriber = tracing_subscriber::fmt()
             .with_max_level(Level::INFO)

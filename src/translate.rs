@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, instrument, warn};
 
 // funtranslations is very rate limited and slow so I've opted to use an in memory cache.
-// In a production API I would buy an API key for funtranslations
+// In a production API I would buy an API key for funtranslations because even with a cache the rate limit is a serious issue.
 type Cache = Lazy<Mutex<HashMap<String, String>>>;
 static YODA_CACHE: Cache = Lazy::new(|| Mutex::new(HashMap::new()));
 static SHAKESPEARE_CACHE: Cache = Lazy::new(|| Mutex::new(HashMap::new()));

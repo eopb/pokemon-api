@@ -5,7 +5,6 @@ EXPOSE 8080
 WORKDIR /usr/src/pokemon-api
 COPY . .
 
-# RUN cargo build --release
 RUN cargo install --path .
 
 ENTRYPOINT ["pokemon-api"]
