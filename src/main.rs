@@ -2,6 +2,10 @@ use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use awc::Client;
 use pokeapi::PokemonOutput;
 use serde::{Deserialize, Serialize};
+use tracing::{debug, Level};
+use tracing_actix_web::TracingLogger;
+use tracing_subscriber::fmt::format::FmtSpan;
+
 mod pokeapi;
 mod translate;
 
@@ -17,7 +21,7 @@ async fn translated(web::Path((pokemon,)): web::Path<(String,)>) -> impl Respond
     pokemon.description = if pokemon.is_legendary || &pokemon.habitat == "cave" {
         translate::yoda(&pokemon.description).await
     } else {
-        translate::shakespear(&pokemon.description).await
+        translate::shakespeare(&pokemon.description).await
     }
     .unwrap_or(pokemon.description);
 
@@ -26,8 +30,21 @@ async fn translated(web::Path((pokemon,)): web::Path<(String,)>) -> impl Respond
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(index).service(translated))
-        .bind("127.0.0.1:8080")?
-        .run()
-        .await
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(Level::INFO)
+        .with_span_events(FmtSpan::CLOSE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("no global subscriber has been set");
+
+    debug!("hi");
+
+    HttpServer::new(|| {
+        App::new()
+            .wrap(TracingLogger)
+            .service(index)
+            .service(translated)
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
 }

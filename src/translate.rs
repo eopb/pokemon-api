@@ -1,41 +1,73 @@
 use serde::{Deserialize, Serialize};
+use tracing::{info, instrument, warn};
 
+use std::{collections::HashMap, sync::Mutex};
+
+use once_cell::sync::Lazy;
+
+type Cache = Lazy<Mutex<HashMap<String, String>>>;
+
+static YODA_CACHE: Cache = Lazy::new(|| Mutex::new(HashMap::new()));
+
+static SHAKESPEARE_CACHE: Cache = Lazy::new(|| Mutex::new(HashMap::new()));
+
+#[instrument(level = "info")]
 pub async fn yoda(text: &str) -> Option<String> {
-    translate(text, "yoda").await
+    translate(text, "yoda", &YODA_CACHE).await
 }
 
-pub async fn shakespear(text: &str) -> Option<String> {
-    translate(text, "shakespear").await
+#[instrument(level = "info")]
+pub async fn shakespeare(text: &str) -> Option<String> {
+    translate(text, "shakespeare", &SHAKESPEARE_CACHE).await
 }
 
 #[derive(Deserialize)]
 struct ApiResponse {
-    content: Content,
+    contents: Contents,
 }
 
 #[derive(Deserialize)]
-struct Content {
+struct Contents {
     translated: String,
 }
 
-async fn translate(text: &str, trans_type: &str) -> Option<String> {
-    let request = serde_json::json!({
-        "text": text,
-    });
+#[derive(Serialize)]
+struct Text {
+    text: String,
+}
 
+async fn translate(text: &str, trans_type: &str, cache: &Cache) -> Option<String> {
+    if let Ok(mut cache) = cache.lock() {
+        if let Some(translation) = cache.get(text) {
+            info!("Taking translation from cache");
+            return Some(translation.to_owned());
+        }
+        let translation = funtranslations(text, trans_type).await;
+        if let Some(ref translation) = translation {
+            cache.insert(text.to_owned(), translation.to_owned());
+        };
+        translation
+    } else {
+        warn!("Unable to get lock on cache");
+        funtranslations(text, trans_type).await
+    }
+}
+async fn funtranslations(text: &str, trans_type: &str) -> Option<String> {
+    let text = text.to_owned();
+    let request = Text { text };
     let mut client = awc::Client::default();
     let response: ApiResponse = client
         .post(format!(
             "https://api.funtranslations.com/translate/{}.json",
             trans_type,
         ))
-        .send_json(&request)
+        .send_form(&request)
         .await
-         //.ok()?
-        .expect("1")
+        .map_err(|e| warn!("Failed to connect to funtranslations: {:?}", e))
+        .ok()?
         .json()
         .await
-        .expect("2");
-         //.ok()?;
-    Some(response.content.translated)
+        .map_err(|e| warn!("failed to parse json from funtranslations: {:?}", e))
+        .ok()?;
+    Some(response.contents.translated)
 }

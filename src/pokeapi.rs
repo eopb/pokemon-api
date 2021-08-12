@@ -66,7 +66,7 @@ impl PokeApiData {
             .send() // <- Send http request
             .await
             .expect("oof")
-    //        .ok()?
+            //        .ok()?
             .json()
             .await
             .ok()
