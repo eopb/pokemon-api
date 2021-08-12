@@ -1,7 +1,7 @@
 mod pokeapi;
 mod translate;
 
-use pokeapi::PokemonOutput;
+use pokeapi::Pokemon;
 
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use tracing::{info, Level};
@@ -12,12 +12,12 @@ static SOCKET_ADD: &str = "127.0.0.1:8080";
 
 #[get("/pokemon/{pokemon}")]
 async fn index(web::Path((pokemon,)): web::Path<(String,)>) -> impl Responder {
-    HttpResponse::Ok().json(PokemonOutput::get(&pokemon).await)
+    HttpResponse::Ok().json(Pokemon::get(&pokemon).await)
 }
 
 #[get("/pokemon/translated/{pokemon}")]
 async fn translated(web::Path((pokemon,)): web::Path<(String,)>) -> impl Responder {
-    let mut pokemon = PokemonOutput::get(&pokemon).await.unwrap();
+    let mut pokemon = Pokemon::get(&pokemon).await.unwrap();
 
     pokemon.description = if pokemon.is_legendary || &pokemon.habitat == "cave" {
         translate::yoda(&pokemon.description).await

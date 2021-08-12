@@ -1,14 +1,13 @@
-use serde::{Deserialize, Serialize};
-use tracing::{info, instrument, warn};
-
 use std::{collections::HashMap, sync::Mutex};
 
+use serde::{Deserialize, Serialize};
+use tracing::{info, instrument, warn};
 use once_cell::sync::Lazy;
 
+
+// funtranslations is very rate limited and slow so I've opted to use an in memory cache.
 type Cache = Lazy<Mutex<HashMap<String, String>>>;
-
 static YODA_CACHE: Cache = Lazy::new(|| Mutex::new(HashMap::new()));
-
 static SHAKESPEARE_CACHE: Cache = Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[instrument(level = "info")]
@@ -19,21 +18,6 @@ pub async fn yoda(text: &str) -> Option<String> {
 #[instrument(level = "info")]
 pub async fn shakespeare(text: &str) -> Option<String> {
     translate(text, "shakespeare", &SHAKESPEARE_CACHE).await
-}
-
-#[derive(Deserialize)]
-struct ApiResponse {
-    contents: Contents,
-}
-
-#[derive(Deserialize)]
-struct Contents {
-    translated: String,
-}
-
-#[derive(Serialize)]
-struct Text {
-    text: String,
 }
 
 async fn translate(text: &str, trans_type: &str, cache: &Cache) -> Option<String> {
@@ -52,16 +36,29 @@ async fn translate(text: &str, trans_type: &str, cache: &Cache) -> Option<String
         funtranslations(text, trans_type).await
     }
 }
+
 async fn funtranslations(text: &str, trans_type: &str) -> Option<String> {
-    let text = text.to_owned();
-    let request = Text { text };
+    #[derive(Serialize)]
+    struct PostBody<'a> {
+        text: &'a str,
+    }
+
+    #[derive(Deserialize)]
+    struct Response {
+        contents: Contents,
+    }
+    #[derive(Deserialize)]
+    struct Contents {
+        translated: String,
+    }
+
     let client = awc::Client::default();
-    let response: ApiResponse = client
+    let response: Response = client
         .post(format!(
             "https://api.funtranslations.com/translate/{}.json",
             trans_type,
         ))
-        .send_form(&request)
+        .send_form(&PostBody { text })
         .await
         .map_err(|e| warn!("Failed to connect to funtranslations: {:?}", e))
         .ok()?

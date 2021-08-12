@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
+use tracing::{error, instrument};
 
-#[derive(Serialize, Debug)]
-pub struct PokemonOutput {
+#[derive(Serialize)]
+pub struct Pokemon {
     name: String,
     pub description: String,
     pub habitat: String,
@@ -10,7 +10,7 @@ pub struct PokemonOutput {
     pub is_legendary: bool,
 }
 
-impl PokemonOutput {
+impl Pokemon {
     pub async fn get(pokemon: &str) -> Option<Self> {
         let PokeApiData {
             name,
@@ -30,7 +30,8 @@ impl PokemonOutput {
     }
 }
 
-#[derive(Deserialize, Debug)]
+/// The shape of data returned by pokeapi
+#[derive(Deserialize)]
 struct PokeApiData {
     name: String,
     is_legendary: bool,
@@ -38,18 +39,18 @@ struct PokeApiData {
     flavor_text_entries: Vec<FlavorText>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct FlavorText {
     flavor_text: String,
     language: Language,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Language {
     name: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Habitat {
     name: String,
 }
@@ -62,13 +63,14 @@ impl PokeApiData {
             .get(format!(
                 "https://pokeapi.co/api/v2/pokemon-species/{}",
                 pokemon
-            )) // <- Create request builder
-            .send() // <- Send http request
+            ))
+            .send()
             .await
-            .expect("oof")
-            //        .ok()?
+            .map_err(|e| error!("Failed to connect to pokeapi: {:?}", e))
+            .ok()?
             .json()
             .await
+            .map_err(|e| error!("Failed to parse json from pokeapi: {:?}", e))
             .ok()
     }
 }
