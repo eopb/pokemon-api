@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tracing::{error, instrument};
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Pokemon {
     name: String,
     pub description: String,
@@ -72,5 +72,36 @@ impl PokeApiData {
             .await
             .map_err(|e| error!("Failed to parse json from pokeapi: {:?}", e))
             .ok()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[actix_rt::test]
+    async fn standard() {
+        assert_eq!(
+            Pokemon::get("ditto").await.unwrap(),
+            Pokemon {
+                name: "ditto".to_owned(),
+                description: "It can freely recombine its own cellular structure to\ntransform into other life-forms.".to_owned(),
+                habitat: "urban".to_owned(),
+                is_legendary: false,
+            }
+        );
+    }
+    #[actix_rt::test]
+    async fn legendary() {
+        assert_eq!(
+            Pokemon::get("mewtwo").await.unwrap(),
+            Pokemon {
+                name: "mewtwo".to_owned(),
+                description: "It was created by\na scientist after\nyears of horrific\u{c}gene splicing and\nDNA engineering\nexperiments.".to_owned(),
+                habitat: "rare".to_owned(),
+                is_legendary: true,
+            }
+        );
     }
 }

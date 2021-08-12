@@ -1,5 +1,8 @@
 # pokemon-api
 
+If I was doing this in production, I would provide a better response when pokeapi fails.
+Such a response would be a little json explaining that the request failed.
+
 ## How to run
 
 This project can be built with docker.

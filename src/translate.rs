@@ -1,11 +1,11 @@
 use std::{collections::HashMap, sync::Mutex};
 
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tracing::{info, instrument, warn};
-use once_cell::sync::Lazy;
-
 
 // funtranslations is very rate limited and slow so I've opted to use an in memory cache.
+// In a production API I would buy an API key for funtranslations
 type Cache = Lazy<Mutex<HashMap<String, String>>>;
 static YODA_CACHE: Cache = Lazy::new(|| Mutex::new(HashMap::new()));
 static SHAKESPEARE_CACHE: Cache = Lazy::new(|| Mutex::new(HashMap::new()));
@@ -21,22 +21,24 @@ pub async fn shakespeare(text: &str) -> Option<String> {
 }
 
 async fn translate(text: &str, trans_type: &str, cache: &Cache) -> Option<String> {
+    let translation = || funtranslations(text, trans_type);
     if let Ok(mut cache) = cache.lock() {
         if let Some(translation) = cache.get(text) {
             info!("Taking translation from cache");
             return Some(translation.to_owned());
         }
-        let translation = funtranslations(text, trans_type).await;
+        let translation = translation().await;
         if let Some(ref translation) = translation {
             cache.insert(text.to_owned(), translation.to_owned());
         };
         translation
     } else {
         warn!("Unable to get lock on cache");
-        funtranslations(text, trans_type).await
+        translation().await
     }
 }
 
+// Call the funtranslations api and return the translation
 async fn funtranslations(text: &str, trans_type: &str) -> Option<String> {
     #[derive(Serialize)]
     struct PostBody<'a> {
@@ -68,3 +70,7 @@ async fn funtranslations(text: &str, trans_type: &str) -> Option<String> {
         .ok()?;
     Some(response.contents.translated)
 }
+
+// Translation is not unit tested because without an API key for funtranslations the tests would be
+// far too fragile.
+// TODO test translation
