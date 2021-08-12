@@ -55,7 +55,7 @@ async fn translate(text: &str, trans_type: &str, cache: &Cache) -> Option<String
 async fn funtranslations(text: &str, trans_type: &str) -> Option<String> {
     let text = text.to_owned();
     let request = Text { text };
-    let mut client = awc::Client::default();
+    let client = awc::Client::default();
     let response: ApiResponse = client
         .post(format!(
             "https://api.funtranslations.com/translate/{}.json",

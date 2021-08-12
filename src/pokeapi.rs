@@ -1,6 +1,5 @@
-use actix_web::{get, web, App, HttpServer, Responder};
-use awc::Client;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 #[derive(Serialize, Debug)]
 pub struct PokemonOutput {
@@ -56,8 +55,9 @@ struct Habitat {
 }
 
 impl PokeApiData {
+    #[instrument(level = "info")]
     async fn get(pokemon: &str) -> Option<Self> {
-        let mut client = awc::Client::default();
+        let client = awc::Client::default();
         client
             .get(format!(
                 "https://pokeapi.co/api/v2/pokemon-species/{}",

@@ -1,13 +1,14 @@
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-use awc::Client;
+mod pokeapi;
+mod translate;
+
 use pokeapi::PokemonOutput;
-use serde::{Deserialize, Serialize};
-use tracing::{debug, Level};
+
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use tracing::{info, Level};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::format::FmtSpan;
 
-mod pokeapi;
-mod translate;
+static SOCKET_ADD: &str = "127.0.0.1:8080";
 
 #[get("/pokemon/{pokemon}")]
 async fn index(web::Path((pokemon,)): web::Path<(String,)>) -> impl Responder {
@@ -36,7 +37,7 @@ async fn main() -> std::io::Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("no global subscriber has been set");
 
-    debug!("hi");
+    info!("Starting server");
 
     HttpServer::new(|| {
         App::new()
@@ -44,7 +45,7 @@ async fn main() -> std::io::Result<()> {
             .service(index)
             .service(translated)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(SOCKET_ADD)?
     .run()
     .await
 }
